@@ -59,6 +59,11 @@ export const updateProject = mutation({
     backgroundColor: v.optional(v.string()),
     foregroundColor: v.optional(v.string()),
     padding: v.optional(v.number()),
+    screenshotSettings: v.optional(v.array(v.object({
+      title: v.optional(v.string()),
+      backgroundColor: v.optional(v.string()),
+      frame: v.optional(v.string()),
+    }))),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -76,6 +81,7 @@ export const updateProject = mutation({
     if (args.backgroundColor !== undefined) patch.backgroundColor = args.backgroundColor;
     if (args.foregroundColor !== undefined) patch.foregroundColor = args.foregroundColor;
     if (args.padding !== undefined) patch.padding = args.padding;
+    if (args.screenshotSettings !== undefined) patch.screenshotSettings = args.screenshotSettings;
     
     await ctx.db.patch(args.projectId, patch);
   },
@@ -163,6 +169,41 @@ export const addScreenshot = mutation({
       order: args.order,
       userId: identity.subject,
     });
+  },
+});
+
+export const updateScreenshotSettings = mutation({
+  args: {
+    projectId: v.id("projects"),
+    index: v.number(),
+    settings: v.object({
+      title: v.optional(v.string()),
+      backgroundColor: v.optional(v.string()),
+      frame: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    const project = await ctx.db.get(args.projectId);
+    if (!project || project.userId !== identity.subject) {
+      throw new Error("Project not found or unauthorized");
+    }
+
+    const screenshotSettings = [...(project.screenshotSettings || [])];
+    
+    // Ensure the array is long enough
+    while (screenshotSettings.length <= args.index) {
+      screenshotSettings.push({});
+    }
+
+    screenshotSettings[args.index] = {
+      ...screenshotSettings[args.index],
+      ...args.settings,
+    };
+
+    await ctx.db.patch(args.projectId, { screenshotSettings });
   },
 });
 
