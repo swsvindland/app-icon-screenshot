@@ -26,7 +26,13 @@ export const getProject = query({
     if (!project || project.userId !== identity.subject) {
       return null;
     }
-    return project;
+    
+    let iconUrl = null;
+    if (project.iconStorageId) {
+      iconUrl = await ctx.storage.getUrl(project.iconStorageId);
+    }
+    
+    return { ...project, iconUrl };
   },
 });
 
@@ -46,7 +52,7 @@ export const createProject = mutation({
 });
 
 export const updateProject = mutation({
-  args: { projectId: v.id("projects"), name: v.string() },
+  args: { projectId: v.id("projects"), name: v.optional(v.string()), iconStorageId: v.optional(v.id("_storage")) },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -56,7 +62,22 @@ export const updateProject = mutation({
     if (!project || project.userId !== identity.subject) {
       throw new Error("Project not found or unauthorized");
     }
-    await ctx.db.patch(args.projectId, { name: args.name });
+    
+    const patch: any = {};
+    if (args.name !== undefined) patch.name = args.name;
+    if (args.iconStorageId !== undefined) patch.iconStorageId = args.iconStorageId;
+    
+    await ctx.db.patch(args.projectId, patch);
+  },
+});
+
+export const generateUploadUrl = mutation({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+    return await ctx.storage.generateUploadUrl();
   },
 });
 
