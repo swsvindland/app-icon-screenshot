@@ -31,9 +31,11 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
             })
             .map((screenshot) => {
               const platform = platforms.find(p => p.id === screenshot.platform);
-              const settings = project?.screenshotSettings?.[screenshot.order] || {};
-              const backgroundColor = settings.backgroundColor || project.defaultScreenshotBackgroundColor || "#f3f4f6";
-              const foregroundColor = settings.foregroundColor || project.defaultScreenshotForegroundColor || (settings.backgroundColor ? getContrastColor(settings.backgroundColor) : project.defaultScreenshotBackgroundColor ? getContrastColor(project.defaultScreenshotBackgroundColor) : "#000000");
+              const titleSettings = project?.screenshotTitles?.[screenshot.order] || {};
+              const colorSettings = project?.screenshotOverrides?.[screenshot.order] || {};
+              
+              const backgroundColor = colorSettings.backgroundColor || project.defaultScreenshotBackgroundColor || "#f3f4f6";
+              const foregroundColor = colorSettings.foregroundColor || project.defaultScreenshotForegroundColor || (colorSettings.backgroundColor ? getContrastColor(colorSettings.backgroundColor) : project.defaultScreenshotBackgroundColor ? getContrastColor(project.defaultScreenshotBackgroundColor) : "#000000");
 
               return (
                 <div key={screenshot._id} className="space-y-2">
@@ -45,11 +47,18 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
                       backgroundColor: backgroundColor
                     }}
                   >
-                    {settings.title && (
+                    {(titleSettings.title || titleSettings.subtitle) && (
                       <div className="w-full text-center mb-4 z-10">
-                        <p className="text-[12px] font-bold leading-tight" style={{ color: foregroundColor }}>
-                          {settings.title}
-                        </p>
+                        {titleSettings.title && (
+                          <p className="text-[12px] font-bold leading-tight" style={{ color: foregroundColor }}>
+                            {titleSettings.title}
+                          </p>
+                        )}
+                        {titleSettings.subtitle && (
+                          <p className="text-[10px] mt-1 opacity-80 leading-tight" style={{ color: foregroundColor }}>
+                            {titleSettings.subtitle}
+                          </p>
+                        )}
                       </div>
                     )}
                     
@@ -57,7 +66,7 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
                       <div className="w-full h-full max-h-full">
                         <DeviceFrame 
                           platform={screenshot.platform} 
-                          frameColor={settings.frame || project.defaultScreenshotFrame}
+                          frameColor={project.defaultScreenshotFrame}
                         >
                           {screenshot.url && (
                             <img

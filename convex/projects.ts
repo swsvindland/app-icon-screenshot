@@ -62,11 +62,13 @@ export const updateProject = mutation({
     defaultScreenshotBackgroundColor: v.optional(v.string()),
     defaultScreenshotForegroundColor: v.optional(v.string()),
     defaultScreenshotFrame: v.optional(v.string()),
-    screenshotSettings: v.optional(v.array(v.object({
+    screenshotTitles: v.optional(v.array(v.object({
       title: v.optional(v.string()),
+      subtitle: v.optional(v.string()),
+    }))),
+    screenshotOverrides: v.optional(v.array(v.object({
       backgroundColor: v.optional(v.string()),
       foregroundColor: v.optional(v.string()),
-      frame: v.optional(v.string()),
     }))),
   },
   handler: async (ctx, args) => {
@@ -88,7 +90,8 @@ export const updateProject = mutation({
     if (args.defaultScreenshotBackgroundColor !== undefined) patch.defaultScreenshotBackgroundColor = args.defaultScreenshotBackgroundColor;
     if (args.defaultScreenshotForegroundColor !== undefined) patch.defaultScreenshotForegroundColor = args.defaultScreenshotForegroundColor;
     if (args.defaultScreenshotFrame !== undefined) patch.defaultScreenshotFrame = args.defaultScreenshotFrame;
-    if (args.screenshotSettings !== undefined) patch.screenshotSettings = args.screenshotSettings;
+    if (args.screenshotTitles !== undefined) patch.screenshotTitles = args.screenshotTitles;
+    if (args.screenshotOverrides !== undefined) patch.screenshotOverrides = args.screenshotOverrides;
     
     await ctx.db.patch(args.projectId, patch);
   },
@@ -179,15 +182,13 @@ export const addScreenshot = mutation({
   },
 });
 
-export const updateScreenshotSettings = mutation({
+export const updateScreenshotTitle = mutation({
   args: {
     projectId: v.id("projects"),
     index: v.number(),
     settings: v.object({
       title: v.optional(v.string()),
-      backgroundColor: v.optional(v.string()),
-      foregroundColor: v.optional(v.string()),
-      frame: v.optional(v.string()),
+      subtitle: v.optional(v.string()),
     }),
   },
   handler: async (ctx, args) => {
@@ -199,19 +200,53 @@ export const updateScreenshotSettings = mutation({
       throw new Error("Project not found or unauthorized");
     }
 
-    const screenshotSettings = [...(project.screenshotSettings || [])];
+    const screenshotTitles = [...(project.screenshotTitles || [])];
     
     // Ensure the array is long enough
-    while (screenshotSettings.length <= args.index) {
-      screenshotSettings.push({});
+    while (screenshotTitles.length <= args.index) {
+      screenshotTitles.push({});
     }
 
-    screenshotSettings[args.index] = {
-      ...screenshotSettings[args.index],
+    screenshotTitles[args.index] = {
+      ...screenshotTitles[args.index],
       ...args.settings,
     };
 
-    await ctx.db.patch(args.projectId, { screenshotSettings });
+    await ctx.db.patch(args.projectId, { screenshotTitles });
+  },
+});
+
+export const updateScreenshotOverride = mutation({
+  args: {
+    projectId: v.id("projects"),
+    index: v.number(),
+    settings: v.object({
+      backgroundColor: v.optional(v.string()),
+      foregroundColor: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    const project = await ctx.db.get(args.projectId);
+    if (!project || project.userId !== identity.subject) {
+      throw new Error("Project not found or unauthorized");
+    }
+
+    const screenshotOverrides = [...(project.screenshotOverrides || [])];
+    
+    // Ensure the array is long enough
+    while (screenshotOverrides.length <= args.index) {
+      screenshotOverrides.push({});
+    }
+
+    screenshotOverrides[args.index] = {
+      ...screenshotOverrides[args.index],
+      ...args.settings,
+    };
+
+    await ctx.db.patch(args.projectId, { screenshotOverrides });
   },
 });
 

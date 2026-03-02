@@ -12,11 +12,13 @@ export default defineSchema({
     defaultScreenshotBackgroundColor: v.optional(v.string()),
     defaultScreenshotForegroundColor: v.optional(v.string()),
     defaultScreenshotFrame: v.optional(v.string()),
-    screenshotSettings: v.optional(v.array(v.object({
+    screenshotTitles: v.optional(v.array(v.object({
       title: v.optional(v.string()),
+      subtitle: v.optional(v.string()),
+    }))),
+    screenshotOverrides: v.optional(v.array(v.object({
       backgroundColor: v.optional(v.string()),
       foregroundColor: v.optional(v.string()),
-      frame: v.optional(v.string()),
     }))),
   }).index("by_userId", ["userId"]),
   screenshots: defineTable({

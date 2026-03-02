@@ -17,14 +17,23 @@ interface ScreenshotSettingsProps {
 }
 
 export function ScreenshotSettings({ projectId, project }: ScreenshotSettingsProps) {
-  const updateScreenshotSettings = useMutation(api.projects.updateScreenshotSettings);
+  const updateScreenshotTitle = useMutation(api.projects.updateScreenshotTitle);
+  const updateScreenshotOverride = useMutation(api.projects.updateScreenshotOverride);
   const updateProject = useMutation(api.projects.updateProject);
 
-  const handleUpdateSettings = async (index: number, settings: { title?: string, backgroundColor?: string, foregroundColor?: string, frame?: string }) => {
+  const handleUpdateTitle = async (index: number, settings: { title?: string, subtitle?: string }) => {
     try {
-      await updateScreenshotSettings({ projectId, index, settings });
+      await updateScreenshotTitle({ projectId, index, settings });
     } catch (error) {
-      toast.error("Failed to update screenshot settings");
+      toast.error("Failed to update screenshot title");
+    }
+  };
+
+  const handleUpdateOverride = async (index: number, settings: { backgroundColor?: string, foregroundColor?: string }) => {
+    try {
+      await updateScreenshotOverride({ projectId, index, settings });
+    } catch (error) {
+      toast.error("Failed to update color override");
     }
   };
 
@@ -78,70 +87,78 @@ export function ScreenshotSettings({ projectId, project }: ScreenshotSettingsPro
             </div>
           </div>
 
-          {[...Array(10)].map((_, i) => {
-            const settings = project?.screenshotSettings?.[i] || {};
-
-            return (
-              <div key={i} className="space-y-3 pt-4 first:pt-0 border-t first:border-0">
-                <Label className="text-sm font-bold">Screenshot {i + 1}</Label>
-                <div className="space-y-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Title</Label>
-                    <Input 
-                      placeholder="App Title..."
-                      className="h-8 text-sm"
-                      value={settings.title || ""}
-                      onChange={(e) => handleUpdateSettings(i, { title: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Background</Label>
-                      <div className="flex gap-1">
+          <div className="space-y-4">
+            <Label className="text-sm font-bold border-b pb-2 flex justify-between items-center">
+              Screenshot Settings (1-10)
+              <span className="text-[10px] text-muted-foreground font-normal uppercase">Title / Subtitle / Colors</span>
+            </Label>
+            {[...Array(10)].map((_, i) => {
+              const titleSettings = project?.screenshotTitles?.[i] || {};
+              const overrideSettings = project?.screenshotOverrides?.[i] || {};
+              
+              return (
+                <div key={`screenshot-settings-${i}`} className="space-y-2 pt-2 border-t first:border-t-0 first:pt-0">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-[10px] w-4 text-muted-foreground">{i + 1}</Label>
+                    <div className="flex-1 space-y-1">
+                      <Input 
+                        placeholder="Title..."
+                        className="h-8 text-xs"
+                        value={titleSettings.title || ""}
+                        onChange={(e) => handleUpdateTitle(i, { title: e.target.value })}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <Input 
+                        placeholder="Subtitle..."
+                        className="h-8 text-xs"
+                        value={titleSettings.subtitle || ""}
+                        onChange={(e) => handleUpdateTitle(i, { subtitle: e.target.value })}
+                      />
+                    </div>
+                    <div className="flex gap-1 items-center">
+                      <div className="relative group">
                         <Input 
                           type="color"
-                          className="w-8 h-8 p-0 border-none overflow-hidden"
-                          value={settings.backgroundColor || project.defaultScreenshotBackgroundColor || "#f3f4f6"}
-                          onChange={(e) => handleUpdateSettings(i, { backgroundColor: e.target.value })}
+                          className="w-6 h-6 p-0 border-none overflow-hidden cursor-pointer"
+                          value={overrideSettings.backgroundColor || project.defaultScreenshotBackgroundColor || "#f3f4f6"}
+                          onChange={(e) => handleUpdateOverride(i, { backgroundColor: e.target.value })}
                         />
-                        {settings.backgroundColor && (
+                        {overrideSettings.backgroundColor && (
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="w-8 h-8"
-                            onClick={() => handleUpdateSettings(i, { backgroundColor: undefined })}
+                            className="absolute -top-2 -right-2 w-4 h-4 bg-background border rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                            onClick={() => handleUpdateOverride(i, { backgroundColor: undefined })}
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-2 h-2" />
                           </Button>
                         )}
                       </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Foreground</Label>
-                      <div className="flex gap-1">
+                      <div className="relative group">
                         <Input 
                           type="color"
-                          className="w-8 h-8 p-0 border-none overflow-hidden"
-                          value={settings.foregroundColor || project.defaultScreenshotForegroundColor || (settings.backgroundColor ? getContrastColor(settings.backgroundColor) : project.defaultScreenshotBackgroundColor ? getContrastColor(project.defaultScreenshotBackgroundColor) : "#000000")}
-                          onChange={(e) => handleUpdateSettings(i, { foregroundColor: e.target.value })}
+                          className="w-6 h-6 p-0 border-none overflow-hidden cursor-pointer"
+                          value={overrideSettings.foregroundColor || project.defaultScreenshotForegroundColor || (overrideSettings.backgroundColor ? getContrastColor(overrideSettings.backgroundColor) : project.defaultScreenshotBackgroundColor ? getContrastColor(project.defaultScreenshotBackgroundColor) : "#000000")}
+                          onChange={(e) => handleUpdateOverride(i, { foregroundColor: e.target.value })}
                         />
-                        {settings.foregroundColor && (
+                        {overrideSettings.foregroundColor && (
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="w-8 h-8"
-                            onClick={() => handleUpdateSettings(i, { foregroundColor: undefined })}
+                            className="absolute -top-2 -right-2 w-4 h-4 bg-background border rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                            onClick={() => handleUpdateOverride(i, { foregroundColor: undefined })}
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-2 h-2" />
                           </Button>
                         )}
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </CardContent>
     </Card>
   );
