@@ -52,7 +52,14 @@ export const createProject = mutation({
 });
 
 export const updateProject = mutation({
-  args: { projectId: v.id("projects"), name: v.optional(v.string()), iconStorageId: v.optional(v.id("_storage")) },
+  args: { 
+    projectId: v.id("projects"), 
+    name: v.optional(v.string()), 
+    iconStorageId: v.optional(v.id("_storage")),
+    backgroundColor: v.optional(v.string()),
+    foregroundColor: v.optional(v.string()),
+    padding: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -66,6 +73,9 @@ export const updateProject = mutation({
     const patch: any = {};
     if (args.name !== undefined) patch.name = args.name;
     if (args.iconStorageId !== undefined) patch.iconStorageId = args.iconStorageId;
+    if (args.backgroundColor !== undefined) patch.backgroundColor = args.backgroundColor;
+    if (args.foregroundColor !== undefined) patch.foregroundColor = args.foregroundColor;
+    if (args.padding !== undefined) patch.padding = args.padding;
     
     await ctx.db.patch(args.projectId, patch);
   },

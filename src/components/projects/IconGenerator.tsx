@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,7 +58,12 @@ const RN_ICON_TYPES = [
 ];
 
 export function IconGenerator({ projectId }: IconGeneratorProps) {
+  const project = useQuery(api.projects.getProject, { projectId });
+  const generateUploadUrl = useMutation(api.projects.generateUploadUrl);
+  const updateProject = useMutation(api.projects.updateProject);
+
   const [svgContent, setSvgContent] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [bgColor, setBgColor] = useState("#6366f1");
   const [foregroundColor, setForegroundColor] = useState("#ffffff");
   const [padding, setPadding] = useState(20);
@@ -66,6 +73,20 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
   const [rnIcons, setRnIcons] = useState<{ name: string; url: string; suffix: string }[]>([]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (project) {
+      if (project.iconUrl && !svgContent) {
+        fetch(project.iconUrl)
+          .then(res => res.text())
+          .then(text => setSvgContent(text))
+          .catch(err => console.error("Failed to fetch existing SVG:", err));
+      }
+      if (project.backgroundColor) setBgColor(project.backgroundColor);
+      if (project.foregroundColor) setForegroundColor(project.foregroundColor);
+      if (project.padding !== undefined) setPadding(project.padding);
+    }
+  }, [project, svgContent]);
 
   useEffect(() => {
     return () => {
@@ -81,7 +102,42 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
     }
   }, [svgContent, bgColor, foregroundColor, padding]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const updateColors = async (bg: string, fg: string) => {
+    try {
+      await updateProject({
+        projectId,
+        backgroundColor: bg,
+        foregroundColor: fg,
+      });
+    } catch (error) {
+      console.error("Failed to update colors:", error);
+    }
+  };
+
+  const updatePadding = async (p: number) => {
+    try {
+      await updateProject({
+        projectId,
+        padding: p,
+      });
+    } catch (error) {
+      console.error("Failed to update padding:", error);
+    }
+  };
+
+  const handleBgColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newColor = e.target.value;
+    setBgColor(newColor);
+    updateColors(newColor, foregroundColor);
+  };
+
+  const handleFgColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newColor = e.target.value;
+    setForegroundColor(newColor);
+    updateColors(bgColor, newColor);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -90,10 +146,34 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
       return;
     }
 
+    setIsUploading(true);
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const content = event.target?.result as string;
       setSvgContent(content);
+
+      try {
+        // Upload to Convex
+        const postUrl = await generateUploadUrl();
+        const result = await fetch(postUrl, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        const { storageId } = await result.json();
+        
+        // Update project
+        await updateProject({
+          projectId,
+          iconStorageId: storageId,
+        });
+        toast.success("SVG saved successfully");
+      } catch (error) {
+        console.error("Failed to save SVG:", error);
+        toast.error("SVG uploaded but failed to save to project");
+      } finally {
+        setIsUploading(false);
+      }
     };
     reader.readAsText(file);
   };
@@ -258,12 +338,16 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
           <div className="space-y-2">
             <Label>Foreground SVG</Label>
             <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors"
+              onClick={() => !isUploading && fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors ${isUploading ? "opacity-50 cursor-not-allowed" : ""}`}
             >
-              <Upload className="w-8 h-8 text-muted-foreground" />
+              {isUploading ? (
+                <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+              ) : (
+                <Upload className="w-8 h-8 text-muted-foreground" />
+              )}
               <p className="text-sm text-muted-foreground">
-                {svgContent ? "Change SVG" : "Upload SVG"}
+                {isUploading ? "Uploading..." : (svgContent ? "Change SVG" : "Upload SVG")}
               </p>
               <input 
                 type="file" 
@@ -271,6 +355,7 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
                 onChange={handleFileChange} 
                 accept=".svg" 
                 className="hidden" 
+                disabled={isUploading}
               />
             </div>
           </div>
@@ -283,13 +368,13 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
                   id="bg-color" 
                   type="color" 
                   value={bgColor} 
-                  onChange={(e) => setBgColor(e.target.value)}
+                  onChange={handleBgColorChange}
                   className="w-12 p-1 h-9"
                 />
                 <Input 
                   type="text" 
                   value={bgColor} 
-                  onChange={(e) => setBgColor(e.target.value)}
+                  onChange={handleBgColorChange}
                   className="font-mono"
                 />
               </div>
@@ -302,13 +387,13 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
                   id="fg-color" 
                   type="color" 
                   value={foregroundColor} 
-                  onChange={(e) => setForegroundColor(e.target.value)}
+                  onChange={handleFgColorChange}
                   className="w-12 p-1 h-9"
                 />
                 <Input 
                   type="text" 
                   value={foregroundColor} 
-                  onChange={(e) => setForegroundColor(e.target.value)}
+                  onChange={handleFgColorChange}
                   className="font-mono"
                 />
               </div>
@@ -324,7 +409,11 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
                 min="0" 
                 max="45" 
                 value={padding} 
-                onChange={(e) => setPadding(parseInt(e.target.value))}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  setPadding(val);
+                  updatePadding(val);
+                }}
                 className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer dark:bg-zinc-700"
               />
             </div>

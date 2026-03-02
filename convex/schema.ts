@@ -6,5 +6,8 @@ export default defineSchema({
     name: v.string(),
     userId: v.string(),
     iconStorageId: v.optional(v.id("_storage")),
+    backgroundColor: v.optional(v.string()),
+    foregroundColor: v.optional(v.string()),
+    padding: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
 });
