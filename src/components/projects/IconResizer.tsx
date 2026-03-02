@@ -60,7 +60,7 @@ const ICON_PLATFORMS = [
 
 const ALL_SIZES = Array.from(new Set(ICON_PLATFORMS.flatMap(p => p.sizes.map(s => s.size)))).sort((a, b) => b - a);
 
-export function IconUpload({ projectId, currentIconUrl }: IconUploadProps) {
+export function IconResizer({ projectId, currentIconUrl }: IconUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingZip, setIsGeneratingZip] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentIconUrl || null);

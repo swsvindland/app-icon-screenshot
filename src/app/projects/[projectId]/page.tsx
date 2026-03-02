@@ -24,7 +24,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { IconUpload } from "@/components/projects/IconUpload";
+import { IconResizer } from "@/components/projects/IconResizer";
+import { IconGenerator } from "@/components/projects/IconGenerator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Hammer, Sparkles } from "lucide-react";
 
 export default function ProjectDetailsPage() {
   const params = useParams();
@@ -121,7 +124,26 @@ export default function ProjectDetailsPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <IconUpload projectId={projectId} currentIconUrl={project.iconUrl} />
+        <Tabs defaultValue="resizer" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="resizer" className="gap-2">
+              <Hammer className="w-4 h-4" />
+              Icon Resizer
+            </TabsTrigger>
+            <TabsTrigger value="generator" className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              Icon Generator
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="resizer">
+            <IconResizer projectId={projectId} currentIconUrl={project.iconUrl} />
+          </TabsContent>
+          
+          <TabsContent value="generator">
+            <IconGenerator projectId={projectId} />
+          </TabsContent>
+        </Tabs>
       </main>
 
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
