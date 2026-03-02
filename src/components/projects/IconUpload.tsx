@@ -2,24 +2,69 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, ImageIcon, Loader2, Download } from "lucide-react";
+import { Upload, ImageIcon, Loader2, Download, FileArchive } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { toast } from "sonner";
 import Image from "next/image";
+import JSZip from "jszip";
 
 interface IconUploadProps {
   projectId: Id<"projects">;
   currentIconUrl?: string | null;
 }
 
-const ICON_SIZES = [1024, 512, 192, 64];
+const ICON_PLATFORMS = [
+  {
+    name: "Web & PWA",
+    sizes: [
+      { size: 16, name: "favicon-16x16" },
+      { size: 32, name: "favicon-32x32" },
+      { size: 192, name: "android-chrome-192x192" },
+      { size: 512, name: "android-chrome-512x512" },
+    ],
+  },
+  {
+    name: "iOS",
+    sizes: [
+      { size: 120, name: "apple-touch-icon-120x120" },
+      { size: 152, name: "apple-touch-icon-152x152" },
+      { size: 167, name: "apple-touch-icon-167x167" },
+      { size: 180, name: "apple-touch-icon-180x180" },
+      { size: 1024, name: "ios-marketing-1024x1024" },
+    ],
+  },
+  {
+    name: "Android",
+    sizes: [
+      { size: 36, name: "android-ldpi" },
+      { size: 48, name: "android-mdpi" },
+      { size: 72, name: "android-hdpi" },
+      { size: 96, name: "android-xhdpi" },
+      { size: 144, name: "android-xxhdpi" },
+      { size: 192, name: "android-xxxhdpi" },
+      { size: 512, name: "playstore-512x512" },
+    ],
+  },
+  {
+    name: "MS Store",
+    sizes: [
+      { size: 44, name: "mstile-44x44" },
+      { size: 71, name: "mstile-71x71" },
+      { size: 150, name: "mstile-150x150" },
+      { size: 310, name: "mstile-310x310" },
+    ],
+  },
+];
+
+const ALL_SIZES = Array.from(new Set(ICON_PLATFORMS.flatMap(p => p.sizes.map(s => s.size)))).sort((a, b) => b - a);
 
 export function IconUpload({ projectId, currentIconUrl }: IconUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [isGeneratingZip, setIsGeneratingZip] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentIconUrl || null);
-  const [resizedIcons, setResizedIcons] = useState<{ size: number; url: string }[]>([]);
+  const [resizedIcons, setResizedIcons] = useState<{ size: number; url: string; name: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const generateUploadUrl = useMutation(api.projects.generateUploadUrl);
@@ -73,7 +118,7 @@ export function IconUpload({ projectId, currentIconUrl }: IconUploadProps) {
     });
 
     const newResizedIcons = await Promise.all(
-      ICON_SIZES.map(async (size) => {
+      ICON_PLATFORMS.flatMap(platform => platform.sizes).map(async ({ size, name }) => {
         const canvas = document.createElement("canvas");
         canvas.width = size;
         canvas.height = size;
@@ -86,6 +131,7 @@ export function IconUpload({ projectId, currentIconUrl }: IconUploadProps) {
         
         return {
           size,
+          name,
           url: URL.createObjectURL(blob)
         };
       })
@@ -144,13 +190,48 @@ export function IconUpload({ projectId, currentIconUrl }: IconUploadProps) {
     }
   };
 
-  const downloadIcon = (url: string, size: number) => {
-    const a = document.createElement("a");
+  const downloadIcon = (url: string, name: string) => {
+    const a = document.body.appendChild(document.createElement("a"));
     a.href = url;
-    a.download = `icon-${size}x${size}.png`;
-    document.body.appendChild(a);
+    a.download = `${name}.png`;
     a.click();
     document.body.removeChild(a);
+  };
+
+  const downloadAllAsZip = async () => {
+    if (resizedIcons.length === 0) return;
+    
+    setIsGeneratingZip(true);
+    try {
+      const zip = new JSZip();
+      
+      for (const platform of ICON_PLATFORMS) {
+        const platformFolder = zip.folder(platform.name);
+        for (const { size, name } of platform.sizes) {
+          const icon = resizedIcons.find(i => i.size === size && i.name === name);
+          if (icon) {
+            const response = await fetch(icon.url);
+            const blob = await response.blob();
+            platformFolder?.file(`${name}.png`, blob);
+          }
+        }
+      }
+      
+      const content = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(content);
+      const a = document.body.appendChild(document.createElement("a"));
+      a.href = url;
+      a.download = `app-icons.zip`;
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("ZIP file generated and download started");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to generate ZIP file");
+    } finally {
+      setIsGeneratingZip(false);
+    }
   };
 
   return (
@@ -207,36 +288,64 @@ export function IconUpload({ projectId, currentIconUrl }: IconUploadProps) {
       </div>
 
       {resizedIcons.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold">Generated Sizes</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {resizedIcons.map((icon) => (
-              <div key={icon.size} className="bg-white dark:bg-zinc-900 border rounded-xl p-4 flex flex-col items-center gap-4">
-                <div 
-                  className="relative rounded-2xl overflow-hidden shadow-md border bg-zinc-50 flex items-center justify-center"
-                  style={{ width: 128, height: 128 }}
-                >
-                  <img
-                    src={icon.url}
-                    alt={`${icon.size}x${icon.size}`}
-                    style={{ 
-                      width: icon.size > 128 ? '100%' : icon.size,
-                      height: icon.size > 128 ? '100%' : icon.size,
-                      objectFit: 'contain'
-                    }}
-                  />
-                </div>
-                <div className="text-center w-full">
-                  <p className="text-sm font-medium">{icon.size}x{icon.size}</p>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="w-full mt-2"
-                    onClick={() => downloadIcon(icon.url, icon.size)}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
-                  </Button>
+        <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-bold tracking-tight">Generated Icons</h3>
+            <Button onClick={downloadAllAsZip} disabled={isGeneratingZip}>
+              {isGeneratingZip ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating ZIP...
+                </>
+              ) : (
+                <>
+                  <FileArchive className="mr-2 h-4 w-4" />
+                  Download All (ZIP)
+                </>
+              )}
+            </Button>
+          </div>
+
+          <div className="space-y-12">
+            {ICON_PLATFORMS.map((platform) => (
+              <div key={platform.name} className="space-y-4">
+                <h4 className="text-lg font-semibold border-b pb-2">{platform.name}</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {platform.sizes.map(({ size, name }) => {
+                    const icon = resizedIcons.find(i => i.size === size && i.name === name);
+                    if (!icon) return null;
+                    return (
+                      <div key={name} className="bg-white dark:bg-zinc-900 border rounded-xl p-4 flex flex-col items-center gap-4">
+                        <div 
+                          className="relative rounded-2xl overflow-hidden shadow-md border bg-zinc-50 flex items-center justify-center"
+                          style={{ width: 100, height: 100 }}
+                        >
+                          <img
+                            src={icon.url}
+                            alt={name}
+                            style={{ 
+                              width: icon.size > 100 ? '100%' : icon.size,
+                              height: icon.size > 100 ? '100%' : icon.size,
+                              objectFit: 'contain'
+                            }}
+                          />
+                        </div>
+                        <div className="text-center w-full">
+                          <p className="text-sm font-medium truncate" title={name}>{name}</p>
+                          <p className="text-xs text-muted-foreground">{size}x{size}</p>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full mt-3"
+                            onClick={() => downloadIcon(icon.url, icon.name)}
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Download
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
