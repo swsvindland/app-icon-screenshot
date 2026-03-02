@@ -180,28 +180,15 @@ export function ScreenshotGenerator({ projectId }: ScreenshotGeneratorProps) {
                 .filter(s => s.platform === selectedPlatform)
                 .sort((a, b) => a.order - b.order)
                 .map((screenshot) => {
-                  const settings = project?.screenshotSettings?.[screenshot.order] || {};
-                  const backgroundColor = settings.backgroundColor || project.defaultScreenshotBackgroundColor || "#f3f4f6";
-                  const foregroundColor = settings.foregroundColor || project.defaultScreenshotForegroundColor || getContrastColor(backgroundColor);
-                  
                   return (
                     <div key={screenshot._id} className="space-y-2 p-2 border rounded-lg bg-card">
                       <div 
                         className="relative group rounded-md overflow-hidden border bg-muted flex items-center justify-center mx-auto"
                         style={{ 
                           aspectRatio: PLATFORMS.find(p => p.id === selectedPlatform)?.aspect || "9/16",
-                          backgroundColor: backgroundColor
                         }}
                       >
-                        {settings.title && (
-                          <div className="absolute top-2 left-0 right-0 text-center px-1 z-10">
-                            <p className="text-[8px] font-bold truncate" style={{ color: foregroundColor }}>
-                              {settings.title}
-                            </p>
-                          </div>
-                        )}
-                        
-                        <div className={`relative w-[85%] h-[85%] mt-auto mb-2 rounded-sm overflow-hidden border-2 ${project.defaultScreenshotFrame === 'black' ? 'border-black' : project.defaultScreenshotFrame === 'silver' ? 'border-slate-300' : 'border-transparent'}`}>
+                        <div className="relative w-full h-full rounded-sm overflow-hidden">
                           {screenshot.url && (
                             <img
                               src={screenshot.url}
