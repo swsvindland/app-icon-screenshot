@@ -59,9 +59,13 @@ export const updateProject = mutation({
     backgroundColor: v.optional(v.string()),
     foregroundColor: v.optional(v.string()),
     padding: v.optional(v.number()),
+    defaultScreenshotBackgroundColor: v.optional(v.string()),
+    defaultScreenshotForegroundColor: v.optional(v.string()),
+    defaultScreenshotFrame: v.optional(v.string()),
     screenshotSettings: v.optional(v.array(v.object({
       title: v.optional(v.string()),
       backgroundColor: v.optional(v.string()),
+      foregroundColor: v.optional(v.string()),
       frame: v.optional(v.string()),
     }))),
   },
@@ -81,6 +85,9 @@ export const updateProject = mutation({
     if (args.backgroundColor !== undefined) patch.backgroundColor = args.backgroundColor;
     if (args.foregroundColor !== undefined) patch.foregroundColor = args.foregroundColor;
     if (args.padding !== undefined) patch.padding = args.padding;
+    if (args.defaultScreenshotBackgroundColor !== undefined) patch.defaultScreenshotBackgroundColor = args.defaultScreenshotBackgroundColor;
+    if (args.defaultScreenshotForegroundColor !== undefined) patch.defaultScreenshotForegroundColor = args.defaultScreenshotForegroundColor;
+    if (args.defaultScreenshotFrame !== undefined) patch.defaultScreenshotFrame = args.defaultScreenshotFrame;
     if (args.screenshotSettings !== undefined) patch.screenshotSettings = args.screenshotSettings;
     
     await ctx.db.patch(args.projectId, patch);
@@ -179,6 +186,7 @@ export const updateScreenshotSettings = mutation({
     settings: v.object({
       title: v.optional(v.string()),
       backgroundColor: v.optional(v.string()),
+      foregroundColor: v.optional(v.string()),
       frame: v.optional(v.string()),
     }),
   },

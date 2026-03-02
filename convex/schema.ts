@@ -9,9 +9,13 @@ export default defineSchema({
     backgroundColor: v.optional(v.string()),
     foregroundColor: v.optional(v.string()),
     padding: v.optional(v.number()),
+    defaultScreenshotBackgroundColor: v.optional(v.string()),
+    defaultScreenshotForegroundColor: v.optional(v.string()),
+    defaultScreenshotFrame: v.optional(v.string()),
     screenshotSettings: v.optional(v.array(v.object({
       title: v.optional(v.string()),
       backgroundColor: v.optional(v.string()),
+      foregroundColor: v.optional(v.string()),
       frame: v.optional(v.string()),
     }))),
   }).index("by_userId", ["userId"]),

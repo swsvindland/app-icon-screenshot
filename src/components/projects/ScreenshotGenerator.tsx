@@ -36,6 +36,7 @@ export function ScreenshotGenerator({ projectId }: ScreenshotGeneratorProps) {
   const addScreenshot = useMutation(api.projects.addScreenshot);
   const deleteScreenshot = useMutation(api.projects.deleteScreenshot);
   const updateScreenshotSettings = useMutation(api.projects.updateScreenshotSettings);
+  const updateProject = useMutation(api.projects.updateProject);
 
   const [uploadingPlatform, setUploadingPlatform] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -90,7 +91,7 @@ export function ScreenshotGenerator({ projectId }: ScreenshotGeneratorProps) {
     }
   };
 
-  const handleUpdateSettings = async (index: number, settings: { title?: string, backgroundColor?: string, frame?: string }) => {
+  const handleUpdateSettings = async (index: number, settings: { title?: string, backgroundColor?: string, foregroundColor?: string, frame?: string }) => {
     try {
       await updateScreenshotSettings({ projectId, index, settings });
     } catch (error) {
@@ -180,24 +181,27 @@ export function ScreenshotGenerator({ projectId }: ScreenshotGeneratorProps) {
                 .sort((a, b) => a.order - b.order)
                 .map((screenshot) => {
                   const settings = project?.screenshotSettings?.[screenshot.order] || {};
+                  const backgroundColor = settings.backgroundColor || project.defaultScreenshotBackgroundColor || "#f3f4f6";
+                  const foregroundColor = settings.foregroundColor || project.defaultScreenshotForegroundColor || getContrastColor(backgroundColor);
+                  
                   return (
                     <div key={screenshot._id} className="space-y-2 p-2 border rounded-lg bg-card">
                       <div 
                         className="relative group rounded-md overflow-hidden border bg-muted flex items-center justify-center mx-auto"
                         style={{ 
                           aspectRatio: PLATFORMS.find(p => p.id === selectedPlatform)?.aspect || "9/16",
-                          backgroundColor: settings.backgroundColor || "#f3f4f6"
+                          backgroundColor: backgroundColor
                         }}
                       >
                         {settings.title && (
                           <div className="absolute top-2 left-0 right-0 text-center px-1 z-10">
-                            <p className="text-[8px] font-bold truncate" style={{ color: getContrastColor(settings.backgroundColor || "#f3f4f6") }}>
+                            <p className="text-[8px] font-bold truncate" style={{ color: foregroundColor }}>
                               {settings.title}
                             </p>
                           </div>
                         )}
                         
-                        <div className={`relative w-[85%] h-[85%] mt-auto mb-2 rounded-sm overflow-hidden border-2 ${settings.frame === 'black' ? 'border-black' : settings.frame === 'silver' ? 'border-slate-300' : 'border-transparent'}`}>
+                        <div className={`relative w-[85%] h-[85%] mt-auto mb-2 rounded-sm overflow-hidden border-2 ${project.defaultScreenshotFrame === 'black' ? 'border-black' : project.defaultScreenshotFrame === 'silver' ? 'border-slate-300' : 'border-transparent'}`}>
                           {screenshot.url && (
                             <img
                               src={screenshot.url}
@@ -244,10 +248,48 @@ export function ScreenshotGenerator({ projectId }: ScreenshotGeneratorProps) {
             <CardDescription>Settings for each screenshot slot</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+              <div className="space-y-3 pb-6 border-b">
+                <Label className="text-sm font-bold">Global Defaults</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Background</Label>
+                    <div className="flex gap-1">
+                      <Input 
+                        type="color"
+                        className="w-8 h-8 p-0 border-none overflow-hidden"
+                        value={project.defaultScreenshotBackgroundColor || "#f3f4f6"}
+                        onChange={(e) => updateProject({ projectId, defaultScreenshotBackgroundColor: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Foreground</Label>
+                    <div className="flex gap-1">
+                      <Input 
+                        type="color"
+                        className="w-8 h-8 p-0 border-none overflow-hidden"
+                        value={project.defaultScreenshotForegroundColor || (project.defaultScreenshotBackgroundColor ? getContrastColor(project.defaultScreenshotBackgroundColor) : "#000000")}
+                        onChange={(e) => updateProject({ projectId, defaultScreenshotForegroundColor: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="col-span-2 space-y-1">
+                    <Label className="text-xs">Frame</Label>
+                    <select 
+                      className="w-full h-8 rounded-md border border-input bg-background px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                      value={project.defaultScreenshotFrame || "none"}
+                      onChange={(e) => updateProject({ projectId, defaultScreenshotFrame: e.target.value })}
+                    >
+                      <option value="none">None</option>
+                      <option value="black">Black</option>
+                      <option value="silver">Silver</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               {[...Array(10)].map((_, i) => {
                 const settings = project?.screenshotSettings?.[i] || {};
-                const hasScreenshots = screenshots.some(s => s.order === i);
-                if (!hasScreenshots && i > (project?.screenshotSettings?.length || 0)) return null;
 
                 return (
                   <div key={i} className="space-y-3 pt-4 first:pt-0 border-t first:border-0">
@@ -269,22 +311,41 @@ export function ScreenshotGenerator({ projectId }: ScreenshotGeneratorProps) {
                             <Input 
                               type="color"
                               className="w-8 h-8 p-0 border-none overflow-hidden"
-                              value={settings.backgroundColor || "#f3f4f6"}
+                              value={settings.backgroundColor || project.defaultScreenshotBackgroundColor || "#f3f4f6"}
                               onChange={(e) => handleUpdateSettings(i, { backgroundColor: e.target.value })}
                             />
+                            {settings.backgroundColor && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="w-8 h-8"
+                                onClick={() => handleUpdateSettings(i, { backgroundColor: undefined })}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Frame</Label>
-                          <select 
-                            className="w-full h-8 rounded-md border border-input bg-background px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-                            value={settings.frame || "none"}
-                            onChange={(e) => handleUpdateSettings(i, { frame: e.target.value })}
-                          >
-                            <option value="none">None</option>
-                            <option value="black">Black</option>
-                            <option value="silver">Silver</option>
-                          </select>
+                          <Label className="text-xs">Foreground</Label>
+                          <div className="flex gap-1">
+                            <Input 
+                              type="color"
+                              className="w-8 h-8 p-0 border-none overflow-hidden"
+                              value={settings.foregroundColor || project.defaultScreenshotForegroundColor || (settings.backgroundColor ? getContrastColor(settings.backgroundColor) : project.defaultScreenshotBackgroundColor ? getContrastColor(project.defaultScreenshotBackgroundColor) : "#000000")}
+                              onChange={(e) => handleUpdateSettings(i, { foregroundColor: e.target.value })}
+                            />
+                            {settings.foregroundColor && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="w-8 h-8"
+                                onClick={() => handleUpdateSettings(i, { foregroundColor: undefined })}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -314,6 +375,9 @@ export function ScreenshotGenerator({ projectId }: ScreenshotGeneratorProps) {
                 .map((screenshot) => {
                   const platform = PLATFORMS.find(p => p.id === screenshot.platform);
                   const settings = project?.screenshotSettings?.[screenshot.order] || {};
+                  const backgroundColor = settings.backgroundColor || project.defaultScreenshotBackgroundColor || "#f3f4f6";
+                  const foregroundColor = settings.foregroundColor || project.defaultScreenshotForegroundColor || getContrastColor(backgroundColor);
+
                   return (
                     <div key={screenshot._id} className="space-y-2">
                       <div 
@@ -321,18 +385,18 @@ export function ScreenshotGenerator({ projectId }: ScreenshotGeneratorProps) {
                         style={{ 
                           width: platform?.aspect === "16/9" ? "240px" : platform?.aspect === "4/3" ? "200px" : "140px",
                           aspectRatio: platform?.aspect || "9/16",
-                          backgroundColor: settings.backgroundColor || "#f3f4f6"
+                          backgroundColor: backgroundColor
                         }}
                       >
                         {settings.title && (
                           <div className="absolute top-[8%] left-0 right-0 text-center px-2 z-10">
-                            <p className="text-[10px] font-bold truncate" style={{ color: getContrastColor(settings.backgroundColor || "#f3f4f6") }}>
+                            <p className="text-[10px] font-bold truncate" style={{ color: foregroundColor }}>
                               {settings.title}
                             </p>
                           </div>
                         )}
                         
-                        <div className={`relative w-[85%] h-[85%] mt-auto mb-[10%] rounded-md overflow-hidden border-2 ${settings.frame === 'black' ? 'border-black' : settings.frame === 'silver' ? 'border-slate-300' : 'border-transparent'}`}>
+                        <div className={`relative w-[85%] h-[85%] mt-auto mb-[10%] rounded-md overflow-hidden border-2 ${project.defaultScreenshotFrame === 'black' ? 'border-black' : project.defaultScreenshotFrame === 'silver' ? 'border-slate-300' : 'border-transparent'}`}>
                           {screenshot.url && (
                             <img
                               src={screenshot.url}
