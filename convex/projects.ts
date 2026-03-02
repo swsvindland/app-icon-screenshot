@@ -250,6 +250,50 @@ export const updateScreenshotOverride = mutation({
   },
 });
 
+export const reorderScreenshots = mutation({
+  args: {
+    projectId: v.id("projects"),
+    platform: v.string(),
+    orderedIds: v.array(v.id("screenshots")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    const project = await ctx.db.get(args.projectId);
+    if (!project || project.userId !== identity.subject) {
+      throw new Error("Project not found or unauthorized");
+    }
+
+    const existing = await ctx.db
+      .query("screenshots")
+      .withIndex("by_project_platform", (q) =>
+        q.eq("projectId", args.projectId).eq("platform", args.platform)
+      )
+      .collect();
+
+    // Validate all provided ids belong to this project/platform and sets match
+    const existingIds = new Set(existing.map((s) => s._id));
+    const providedIds = new Set(args.orderedIds);
+
+    if (existing.length !== args.orderedIds.length) {
+      throw new Error("Provided orderedIds length does not match existing screenshots count");
+    }
+
+    for (const id of args.orderedIds) {
+      if (!existingIds.has(id)) {
+        throw new Error("orderedIds contains an id not belonging to this project/platform");
+      }
+    }
+
+    // Persist new order
+    for (let i = 0; i < args.orderedIds.length; i++) {
+      const id = args.orderedIds[i];
+      await ctx.db.patch(id, { order: i });
+    }
+  },
+});
+
 export const deleteScreenshot = mutation({
   args: { screenshotId: v.id("screenshots") },
   handler: async (ctx, args) => {
@@ -263,5 +307,22 @@ export const deleteScreenshot = mutation({
 
     await ctx.storage.delete(screenshot.storageId);
     await ctx.db.delete(args.screenshotId);
+
+    // Re-normalize remaining orders for this project/platform to keep them contiguous
+    const remaining = await ctx.db
+      .query("screenshots")
+      .withIndex("by_project_platform", (q) =>
+        q.eq("projectId", screenshot.projectId).eq("platform", screenshot.platform)
+      )
+      .collect();
+
+    // Sort by current order then assign 0..n-1
+    remaining.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    for (let i = 0; i < remaining.length; i++) {
+      const s = remaining[i];
+      if (s.order !== i) {
+        await ctx.db.patch(s._id, { order: i });
+      }
+    }
   },
 });
