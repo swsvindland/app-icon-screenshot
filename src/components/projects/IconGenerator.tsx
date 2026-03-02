@@ -58,6 +58,7 @@ const RN_ICON_TYPES = [
 export function IconGenerator({ projectId }: IconGeneratorProps) {
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [bgColor, setBgColor] = useState("#6366f1");
+  const [foregroundColor, setForegroundColor] = useState("#ffffff");
   const [padding, setPadding] = useState(20);
   const [isGeneratingZip, setIsGeneratingZip] = useState(false);
   const [resizedIcons, setResizedIcons] = useState<{ size: number; url: string; name: string; type?: string }[]>([]);
@@ -78,7 +79,7 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
     if (svgContent) {
       generatePreview();
     }
-  }, [svgContent, bgColor, padding]);
+  }, [svgContent, bgColor, foregroundColor, padding]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -101,7 +102,7 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
     if (!svgContent) return;
 
     try {
-      const url = await renderToDataUrl(svgContent, 512, bgColor, padding);
+      const url = await renderToDataUrl(svgContent, 512, bgColor, foregroundColor, padding);
       setPreviewUrl(url);
       
       // Clear old icons
@@ -113,7 +114,7 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
       // Generate all sizes for the preview list (only standard ones for UI performance)
       const newIcons = await Promise.all(
         ICON_PLATFORMS[0].sizes.map(async ({ size, name }) => {
-          const iconUrl = await renderToDataUrl(svgContent, size, bgColor, padding);
+          const iconUrl = await renderToDataUrl(svgContent, size, bgColor, foregroundColor, padding);
           const response = await fetch(iconUrl);
           const blob = await response.blob();
           return {
@@ -128,7 +129,7 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
       // Generate RN icons
       const newRnIcons = await Promise.all(
         RN_ICON_TYPES.map(async (type) => {
-          const iconUrl = await renderToDataUrl(svgContent, 1024, bgColor, padding, type.filter);
+          const iconUrl = await renderToDataUrl(svgContent, 1024, bgColor, foregroundColor, padding, type.filter);
           const response = await fetch(iconUrl);
           const blob = await response.blob();
           return {
@@ -146,7 +147,7 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
     }
   };
 
-  const renderToDataUrl = (svg: string, size: number, bg: string, padPercent: number, filter?: string): Promise<string> => {
+  const renderToDataUrl = (svg: string, size: number, bg: string, fg: string, padPercent: number, filter?: string): Promise<string> => {
     return new Promise((resolve, reject) => {
       const canvas = document.createElement("canvas");
       canvas.width = size;
@@ -166,11 +167,25 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
         const paddingAmount = (size * padPercent) / 100;
         const drawSize = size - paddingAmount * 2;
         
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = size;
+        tempCanvas.height = size;
+        const tempCtx = tempCanvas.getContext("2d");
+        if (!tempCtx) return reject("Temp canvas context not found");
+
         if (filter) {
-          ctx.filter = filter;
+          tempCtx.filter = filter;
         }
         
-        ctx.drawImage(img, paddingAmount, paddingAmount, drawSize, drawSize);
+        tempCtx.drawImage(img, paddingAmount, paddingAmount, drawSize, drawSize);
+        
+        // Apply foreground color
+        tempCtx.globalCompositeOperation = "source-in";
+        tempCtx.fillStyle = fg;
+        tempCtx.fillRect(0, 0, size, size);
+        
+        ctx.drawImage(tempCanvas, 0, 0);
+        
         URL.revokeObjectURL(url);
         resolve(canvas.toDataURL("image/png"));
       };
@@ -195,7 +210,7 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
         const platformFolder = zip.folder(platform.name);
         for (const { size, name } of platform.sizes) {
           // Standard icon
-          const dataUrl = await renderToDataUrl(svgContent, size, bgColor, padding);
+          const dataUrl = await renderToDataUrl(svgContent, size, bgColor, foregroundColor, padding);
           const base64Data = dataUrl.split(',')[1];
           platformFolder?.file(`${name}.png`, base64Data, { base64: true });
         }
@@ -204,7 +219,7 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
       // React Native specific icons
       const rnFolder = zip.folder("React Native");
       for (const type of RN_ICON_TYPES) {
-        const dataUrl = await renderToDataUrl(svgContent, 1024, bgColor, padding, type.filter);
+        const dataUrl = await renderToDataUrl(svgContent, 1024, bgColor, foregroundColor, padding, type.filter);
         const base64Data = dataUrl.split(',')[1];
         rnFolder?.file(`icon${type.suffix}.png`, base64Data, { base64: true });
       }
@@ -275,6 +290,25 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
                   type="text" 
                   value={bgColor} 
                   onChange={(e) => setBgColor(e.target.value)}
+                  className="font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fg-color">Foreground Color</Label>
+              <div className="flex gap-2">
+                <Input 
+                  id="fg-color" 
+                  type="color" 
+                  value={foregroundColor} 
+                  onChange={(e) => setForegroundColor(e.target.value)}
+                  className="w-12 p-1 h-9"
+                />
+                <Input 
+                  type="text" 
+                  value={foregroundColor} 
+                  onChange={(e) => setForegroundColor(e.target.value)}
                   className="font-mono"
                 />
               </div>
