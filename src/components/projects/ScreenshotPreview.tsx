@@ -73,7 +73,6 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
                               src={screenshot.url}
                               alt="Screenshot"
                               className="w-full h-full object-cover"
-                              loading="lazy"
                             />
                           )}
                         </DeviceFrame>

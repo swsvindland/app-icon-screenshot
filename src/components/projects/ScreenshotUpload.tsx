@@ -47,8 +47,15 @@ export function ScreenshotUpload({ projectId, selectedPlatform, screenshots, pro
     );
     const [orderedIds, setOrderedIds] = useState<Id<"screenshots">[]>(platformItems.map(s => s._id));
     useEffect(() => {
-      setOrderedIds(platformItems.map(s => s._id));
-    }, [platformItems.map(s => s._id).join(",")]);
+      const newIds = platformItems.map(s => s._id);
+      // Only update if the order or set of IDs has actually changed
+      // to avoid unnecessary re-renders when server data confirms our optimistic update
+      setOrderedIds(prev => {
+        if (prev.length !== newIds.length) return newIds;
+        const hasChanged = newIds.some((id, i) => id !== prev[i]);
+        return hasChanged ? newIds : prev;
+      });
+    }, [platformItems]);
 
     const idToScreenshot = useMemo(() => {
       const map = new Map<Id<"screenshots">, any>();
@@ -187,7 +194,6 @@ export function ScreenshotUpload({ projectId, selectedPlatform, screenshots, pro
                                   src={screenshot.url}
                                   alt="Screenshot"
                                   className="w-full h-full object-cover"
-                                  loading="lazy"
                                 />
                               )}
                           </div>
