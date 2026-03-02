@@ -25,7 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Hammer, Sparkles } from "lucide-react";
+import { Hammer, Sparkles, Layout } from "lucide-react";
 
 export default function ProjectDetailsLayout({
   children,
@@ -138,6 +138,10 @@ export default function ProjectDetailsLayout({
             <TabsTrigger value="generator" className="gap-2">
               <Sparkles className="w-4 h-4" />
               Icon Generator
+            </TabsTrigger>
+            <TabsTrigger value="screenshots" className="gap-2">
+              <Layout className="w-4 h-4" />
+              Screenshot Generator
             </TabsTrigger>
           </TabsList>
           

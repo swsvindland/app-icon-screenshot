@@ -10,4 +10,13 @@ export default defineSchema({
     foregroundColor: v.optional(v.string()),
     padding: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
+  screenshots: defineTable({
+    projectId: v.id("projects"),
+    platform: v.string(), // iphone, ipad, macos, tvos, visionos, android, android7, android10, androidtv, web
+    storageId: v.id("_storage"),
+    order: v.number(),
+    userId: v.string(),
+  })
+    .index("by_project_platform", ["projectId", "platform"])
+    .index("by_userId", ["userId"]),
 });

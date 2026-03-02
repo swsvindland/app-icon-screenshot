@@ -105,3 +105,79 @@ export const deleteProject = mutation({
     await ctx.db.delete(args.projectId);
   },
 });
+
+export const getScreenshots = query({
+  args: { projectId: v.id("projects") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const screenshots = await ctx.db
+      .query("screenshots")
+      .withIndex("by_project_platform", (q) => q.eq("projectId", args.projectId))
+      .collect();
+
+    const results = await Promise.all(
+      screenshots.map(async (s) => ({
+        ...s,
+        url: await ctx.storage.getUrl(s.storageId),
+      }))
+    );
+
+    return results;
+  },
+});
+
+export const addScreenshot = mutation({
+  args: {
+    projectId: v.id("projects"),
+    platform: v.string(),
+    storageId: v.id("_storage"),
+    order: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    const project = await ctx.db.get(args.projectId);
+    if (!project || project.userId !== identity.subject) {
+      throw new Error("Project not found or unauthorized");
+    }
+
+    // Check limit of 10
+    const existing = await ctx.db
+      .query("screenshots")
+      .withIndex("by_project_platform", (q) =>
+        q.eq("projectId", args.projectId).eq("platform", args.platform)
+      )
+      .collect();
+
+    if (existing.length >= 10) {
+      throw new Error("Maximum of 10 screenshots per platform reached");
+    }
+
+    return await ctx.db.insert("screenshots", {
+      projectId: args.projectId,
+      platform: args.platform,
+      storageId: args.storageId,
+      order: args.order,
+      userId: identity.subject,
+    });
+  },
+});
+
+export const deleteScreenshot = mutation({
+  args: { screenshotId: v.id("screenshots") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    const screenshot = await ctx.db.get(args.screenshotId);
+    if (!screenshot || screenshot.userId !== identity.subject) {
+      throw new Error("Screenshot not found or unauthorized");
+    }
+
+    await ctx.storage.delete(screenshot.storageId);
+    await ctx.db.delete(args.screenshotId);
+  },
+});
