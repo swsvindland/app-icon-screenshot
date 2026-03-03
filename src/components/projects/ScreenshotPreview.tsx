@@ -47,23 +47,17 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
                       backgroundColor: backgroundColor
                     }}
                   >
-                    {(titleSettings.title || titleSettings.subtitle) && (
-                      <div className="w-full text-center mb-4 z-10">
-                        {titleSettings.title && (
-                          <p className="text-[12px] font-bold leading-tight" style={{ color: foregroundColor }}>
-                            {titleSettings.title}
-                          </p>
-                        )}
-                        {titleSettings.subtitle && (
-                          <p className="text-[10px] mt-1 opacity-80 leading-tight" style={{ color: foregroundColor }}>
-                            {titleSettings.subtitle}
-                          </p>
-                        )}
-                      </div>
-                    )}
+                    <div className="w-full text-center mb-4 z-10 min-h-[1.5rem] flex flex-col justify-center">
+                      <p className="text-[12px] font-bold leading-tight" style={{ color: foregroundColor }}>
+                        {titleSettings.title || " "}
+                      </p>
+                    </div>
                     
                     <div className="relative flex-1 w-full flex items-center justify-center overflow-hidden">
-                      <div className="w-full h-full max-h-full">
+                      <div 
+                        className="h-full mx-auto"
+                        style={{ aspectRatio: platform?.aspect || "9/16" }}
+                      >
                         <DeviceFrame 
                           platform={screenshot.platform} 
                           frameColor={project.defaultScreenshotFrame}

@@ -1,5 +1,3 @@
-import { Smartphone, Tablet, Monitor, Tv, Glasses } from "lucide-react";
-
 interface DeviceFrameProps {
   platform: string;
   children: React.ReactNode;
@@ -17,9 +15,9 @@ export function DeviceFrame({ platform, children, frameColor = "black" }: Device
 
   if (isIPhone) {
     return (
-      <div className={`relative mx-auto border-[4px] ${borderColor} rounded-[2rem] h-full w-full bg-slate-900 shadow-xl overflow-hidden`}>
+      <div className={`relative mx-auto border-[4px] ${borderColor} rounded-[1.25rem] h-full w-full bg-slate-900 shadow-xl overflow-hidden`}>
         {/* Screen */}
-        <div className="absolute inset-0.5 rounded-[1.8rem] overflow-hidden bg-white">
+        <div className="absolute inset-0.5 rounded-[1.1rem] overflow-hidden bg-white">
           {children}
         </div>
       </div>
@@ -28,11 +26,11 @@ export function DeviceFrame({ platform, children, frameColor = "black" }: Device
 
   if (isAndroid) {
     return (
-      <div className={`relative mx-auto border-[4px] ${borderColor} rounded-[1.5rem] h-full w-full bg-slate-900 shadow-xl overflow-hidden`}>
+      <div className={`relative mx-auto border-[4px] ${borderColor} rounded-[1.25rem] h-full w-full bg-slate-900 shadow-xl overflow-hidden`}>
         {/* Camera Hole */}
         <div className="absolute top-2 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rounded-full z-20"></div>
         {/* Screen */}
-        <div className="absolute inset-0.5 rounded-[1.3rem] overflow-hidden bg-white">
+        <div className="absolute inset-0.5 rounded-[1.1rem] overflow-hidden bg-white">
           {children}
         </div>
       </div>
@@ -41,9 +39,9 @@ export function DeviceFrame({ platform, children, frameColor = "black" }: Device
 
   if (isIPad) {
     return (
-      <div className={`relative mx-auto border-[8px] ${borderColor} rounded-[1.5rem] h-full w-full bg-slate-900 shadow-xl overflow-hidden`}>
+      <div className={`relative mx-auto border-[8px] ${borderColor} rounded-[1rem] h-full w-full bg-slate-900 shadow-xl overflow-hidden`}>
         {/* Screen */}
-        <div className="absolute inset-1 rounded-lg overflow-hidden bg-white">
+        <div className="absolute inset-1 rounded-[0.75rem] overflow-hidden bg-white">
           {children}
         </div>
       </div>

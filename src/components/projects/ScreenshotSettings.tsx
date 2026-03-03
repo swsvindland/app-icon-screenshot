@@ -21,7 +21,7 @@ export function ScreenshotSettings({ projectId, project }: ScreenshotSettingsPro
   const updateScreenshotOverride = useMutation(api.projects.updateScreenshotOverride);
   const updateProject = useMutation(api.projects.updateProject);
 
-  const handleUpdateTitle = async (index: number, settings: { title?: string, subtitle?: string }) => {
+  const handleUpdateTitle = async (index: number, settings: { title?: string }) => {
     try {
       await updateScreenshotTitle({ projectId, index, settings });
     } catch (error) {
@@ -90,7 +90,7 @@ export function ScreenshotSettings({ projectId, project }: ScreenshotSettingsPro
           <div className="space-y-4">
             <Label className="text-sm font-bold border-b pb-2 flex justify-between items-center">
               Screenshot Settings (1-10)
-              <span className="text-[10px] text-muted-foreground font-normal uppercase">Title / Subtitle / Colors</span>
+              <span className="text-[10px] text-muted-foreground font-normal uppercase">Title / Colors</span>
             </Label>
             {[...Array(10)].map((_, i) => {
               const titleSettings = project?.screenshotTitles?.[i] || {};
@@ -106,14 +106,6 @@ export function ScreenshotSettings({ projectId, project }: ScreenshotSettingsPro
                         className="h-8 text-xs"
                         value={titleSettings.title || ""}
                         onChange={(e) => handleUpdateTitle(i, { title: e.target.value })}
-                      />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <Input 
-                        placeholder="Subtitle..."
-                        className="h-8 text-xs"
-                        value={titleSettings.subtitle || ""}
-                        onChange={(e) => handleUpdateTitle(i, { subtitle: e.target.value })}
                       />
                     </div>
                     <div className="flex gap-1 items-center">
