@@ -18,8 +18,6 @@ export function DeviceFrame({ platform, children, frameColor = "black" }: Device
   if (isIPhone) {
     return (
       <div className={`relative mx-auto border-[4px] ${borderColor} rounded-[2rem] h-full w-full bg-slate-900 shadow-xl overflow-hidden`}>
-        {/* Notch / Dynamic Island */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[30%] h-[18px] bg-slate-900 rounded-b-xl z-20"></div>
         {/* Screen */}
         <div className="absolute inset-0.5 rounded-[1.8rem] overflow-hidden bg-white">
           {children}
