@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -14,6 +15,43 @@ import { getContrastColor } from "./DeviceFrame";
 interface ScreenshotSettingsProps {
   projectId: Id<"projects">;
   project: any;
+}
+
+interface ScreenshotTitleInputProps {
+  initialValue: string;
+  index: number;
+  onUpdate: (index: number, settings: { title?: string }) => void;
+}
+
+function ScreenshotTitleInput({ initialValue, index, onUpdate }: ScreenshotTitleInputProps) {
+  const [value, setValue] = useState(initialValue);
+
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
+
+  const handleBlur = () => {
+    if (value !== initialValue) {
+      onUpdate(index, { title: value });
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.currentTarget.blur();
+    }
+  };
+
+  return (
+    <Input 
+      placeholder="Title..."
+      className="h-8 text-xs"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+    />
+  );
 }
 
 export function ScreenshotSettings({ projectId, project }: ScreenshotSettingsProps) {
@@ -101,11 +139,10 @@ export function ScreenshotSettings({ projectId, project }: ScreenshotSettingsPro
                   <div className="flex items-center gap-2">
                     <Label className="text-[10px] w-4 text-muted-foreground">{i + 1}</Label>
                     <div className="flex-1 space-y-1">
-                      <Input 
-                        placeholder="Title..."
-                        className="h-8 text-xs"
-                        value={titleSettings.title || ""}
-                        onChange={(e) => handleUpdateTitle(i, { title: e.target.value })}
+                      <ScreenshotTitleInput 
+                        initialValue={titleSettings.title || ""}
+                        index={i}
+                        onUpdate={handleUpdateTitle}
                       />
                     </div>
                     <div className="flex gap-1 items-center">
