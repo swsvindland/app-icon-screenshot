@@ -320,14 +320,12 @@ export function IconResizer({ projectId, currentIconUrl }: IconUploadProps) {
                           className="relative rounded-2xl overflow-hidden shadow-md border bg-zinc-50 flex items-center justify-center"
                           style={{ width: 100, height: 100 }}
                         >
-                          <img
+                          <Image
                             src={icon.url}
                             alt={name}
-                            style={{ 
-                              width: icon.size > 100 ? '100%' : icon.size,
-                              height: icon.size > 100 ? '100%' : icon.size,
-                              objectFit: 'contain'
-                            }}
+                            fill
+                            className="object-contain"
+                            unoptimized
                           />
                         </div>
                         <div className="text-center w-full">

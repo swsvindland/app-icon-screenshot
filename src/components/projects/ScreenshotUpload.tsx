@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -188,12 +189,13 @@ export function ScreenshotUpload({ projectId, selectedPlatform, screenshots, pro
                     <div className="relative w-full h-full rounded-sm overflow-hidden">
                       <div className="w-full h-full flex flex-col items-center p-2">
                         <div className="flex-1 w-full flex items-center justify-center overflow-hidden">
-                          <div className="w-full h-full scale-[0.8] flex items-center justify-center pointer-events-none">
+                          <div className="w-full h-full scale-[0.8] flex items-center justify-center pointer-events-none relative">
                               {screenshot.url && (
-                                <img
+                                <Image
                                   src={screenshot.url}
                                   alt="Screenshot"
-                                  className="w-full h-full object-cover"
+                                  fill
+                                  className="object-cover"
                                 />
                               )}
                           </div>

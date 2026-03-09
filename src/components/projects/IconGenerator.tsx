@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -444,19 +445,31 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
             {previewUrl ? (
               <div className="space-y-8 flex flex-col items-center">
                 <div 
-                  className="rounded-[22%] shadow-2xl overflow-hidden"
+                  className="rounded-[22%] shadow-2xl overflow-hidden relative"
                   style={{ width: 200, height: 200 }}
                 >
-                  <img src={previewUrl} alt="Icon Preview" className="w-full h-full" />
+                  <Image 
+                    src={previewUrl} 
+                    alt="Icon Preview" 
+                    fill 
+                    className="object-cover" 
+                    unoptimized
+                  />
                 </div>
                 <div className="grid grid-cols-4 gap-4">
                   {[48, 64, 96, 128].map(s => (
                     <div key={s} className="flex flex-col items-center gap-2">
                       <div 
-                        className="rounded-[22%] shadow-lg overflow-hidden border border-zinc-200 dark:border-zinc-800"
+                        className="rounded-[22%] shadow-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 relative"
                         style={{ width: s, height: s }}
                       >
-                        <img src={previewUrl} alt={`Preview ${s}`} className="w-full h-full" />
+                        <Image 
+                          src={previewUrl} 
+                          alt={`Preview ${s}`} 
+                          fill 
+                          className="object-cover" 
+                          unoptimized
+                        />
                       </div>
                       <span className="text-[10px] text-muted-foreground">{s}x{s}</span>
                     </div>
@@ -483,10 +496,16 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
                 {rnIcons.map((type) => (
                   <div key={type.name} className="flex flex-col items-center gap-2 p-4 rounded-lg bg-zinc-50 dark:bg-zinc-900/50">
                     <div 
-                      className="rounded-[22%] shadow-md overflow-hidden bg-white"
+                      className="rounded-[22%] shadow-md overflow-hidden bg-white relative"
                       style={{ width: 64, height: 64 }}
                     >
-                      <img src={type.url} alt={type.name} className="w-full h-full" />
+                      <Image 
+                        src={type.url} 
+                        alt={type.name} 
+                        fill 
+                        className="object-cover" 
+                        unoptimized
+                      />
                     </div>
                     <span className="text-xs font-medium">{type.name}</span>
                   </div>

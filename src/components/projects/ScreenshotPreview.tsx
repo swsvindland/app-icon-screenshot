@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SmartphoneIcon, Download, Loader2 } from "lucide-react";
 import { DeviceFrame, getContrastColor } from "./DeviceFrame";
@@ -168,12 +169,15 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
                           frameColor={project.defaultScreenshotFrame}
                         >
                           {screenshot.url && (
-                            <img
-                              src={screenshot.url}
-                              alt="Screenshot"
-                              className="w-full h-full object-cover object-top"
-                              crossOrigin="anonymous"
-                            />
+                            <div className="relative w-full h-full">
+                              <Image
+                                src={screenshot.url}
+                                alt="Screenshot"
+                                fill
+                                className="object-cover object-top"
+                                unoptimized
+                              />
+                            </div>
                           )}
                         </DeviceFrame>
                       </div>
@@ -264,12 +268,15 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
                       frameColor={project.defaultScreenshotFrame}
                     >
                       {screenshot.url && (
-                        <img
-                          src={screenshot.url}
-                          alt="Screenshot"
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
-                          crossOrigin="anonymous"
-                        />
+                        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                          <Image
+                            src={screenshot.url}
+                            alt="Screenshot"
+                            fill
+                            style={{ objectFit: 'cover', objectPosition: 'top' }}
+                            unoptimized
+                          />
+                        </div>
                       )}
                     </DeviceFrame>
                   </div>
