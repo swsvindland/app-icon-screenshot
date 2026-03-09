@@ -15,9 +15,9 @@ export function DeviceFrame({ platform, children, frameColor = "black" }: Device
 
   if (isIPhone) {
     return (
-      <div className={`relative mx-auto border-[4px] ${borderColor} rounded-[1.25rem] h-full w-full bg-slate-900 shadow-xl overflow-hidden`}>
+      <div className={`relative mx-auto border-2 ${borderColor} rounded-lg h-full w-full overflow-hidden`}>
         {/* Screen */}
-        <div className="absolute inset-0.5 rounded-[1.1rem] overflow-hidden bg-white">
+        <div className="absolute inset-0 overflow-hidden bg-white">
           {children}
         </div>
       </div>
@@ -26,14 +26,12 @@ export function DeviceFrame({ platform, children, frameColor = "black" }: Device
 
   if (isAndroid) {
     return (
-      <div className={`relative mx-auto border-[4px] ${borderColor} rounded-[1.25rem] h-full w-full bg-slate-900 shadow-xl overflow-hidden`}>
-        {/* Camera Hole */}
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rounded-full z-20"></div>
-        {/* Screen */}
-        <div className="absolute inset-0.5 rounded-[1.1rem] overflow-hidden bg-white">
-          {children}
+        <div className={`relative mx-auto border-2 ${borderColor} rounded-sm h-full w-full overflow-hidden`}>
+          {/* Screen */}
+          <div className="absolute inset-0 overflow-hidden bg-white">
+            {children}
+          </div>
         </div>
-      </div>
     );
   }
 
@@ -73,7 +71,7 @@ export function DeviceFrame({ platform, children, frameColor = "black" }: Device
 
   // Fallback for other platforms
   return (
-    <div className={`relative mx-auto border-[2px] ${borderColor} rounded-md h-full w-full overflow-hidden shadow-sm bg-white`}>
+    <div className={`relative mx-auto border-2 ${borderColor} rounded-md h-full w-full overflow-hidden shadow-sm bg-white`}>
       {children}
     </div>
   );

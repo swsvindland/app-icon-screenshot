@@ -145,22 +145,22 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
                 <div key={screenshot._id} className="space-y-2">
                   <div 
                     id={`export-${screenshot._id}`}
-                    className="relative rounded-xl overflow-hidden border shadow-sm flex flex-col items-center p-4"
+                    className="relative overflow-hidden border shadow-xl flex flex-col items-center p-4 transition-all hover:shadow-2xl hover:-translate-y-1"
                     style={{ 
                       width: platform?.aspect === "16/9" ? "240px" : platform?.aspect === "4/3" ? "200px" : "160px",
                       aspectRatio: platform?.aspect || "9/16",
                       backgroundColor: backgroundColor
                     }}
                   >
-                    <div className="w-full text-center mb-4 z-10 min-h-[1.5rem] flex flex-col justify-center">
+                    <div className="w-full text-center mb-4 z-10 min-h-6 flex flex-col justify-center">
                       <p className="text-[12px] font-bold leading-tight" style={{ color: foregroundColor }}>
                         {titleSettings.title || " "}
                       </p>
                     </div>
                     
-                    <div className="relative flex-1 w-full flex items-center justify-center overflow-hidden">
+                    <div className="relative flex-1 w-full flex items-center justify-center">
                       <div 
-                        className="h-full mx-auto"
+                        className="h-full mx-auto overflow-hidden"
                         style={{ aspectRatio: platform?.aspect || "9/16" }}
                       >
                         <DeviceFrame 
@@ -171,7 +171,7 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
                             <img
                               src={screenshot.url}
                               alt="Screenshot"
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover object-top"
                               crossOrigin="anonymous"
                             />
                           )}
@@ -186,7 +186,7 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
         </div>
 
         {/* Hidden high-res export targets */}
-        <div className="sr-only" style={{ position: 'absolute', top: '-9999px', left: '-9999px' }} ref={exportRef}>
+        <div style={{ position: 'fixed', top: '0', left: '0', width: '100%', height: '100%', opacity: 0.01, pointerEvents: 'none', zIndex: -100, overflow: 'hidden' }} ref={exportRef}>
           {screenshots.map((screenshot) => {
             const platform = platforms.find(p => p.id === screenshot.platform);
             const size = EXPORT_SIZES[screenshot.platform] || { width: 1080, height: 1920 };
@@ -252,12 +252,12 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
                   width: '100%',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden'
+                  justifyContent: 'center'
                 }}>
                   <div style={{ 
                     height: '100%',
-                    aspectRatio: platform?.aspect || "9/16"
+                    aspectRatio: platform?.aspect || "9/16",
+                    overflow: 'hidden'
                   }}>
                     <DeviceFrame 
                       platform={screenshot.platform} 
@@ -267,7 +267,7 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
                         <img
                           src={screenshot.url}
                           alt="Screenshot"
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
                           crossOrigin="anonymous"
                         />
                       )}
