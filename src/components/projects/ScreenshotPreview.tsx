@@ -253,6 +253,7 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
                               <DeviceFrame 
                                 platform={screenshot.platform} 
                                 frameColor={project.defaultScreenshotFrame}
+                                scale={scale}
                               >
                                 {screenshot.url && (
                                   <div style={{ position: 'relative', width: '100%', height: '100%', backgroundColor: 'white' }}>
@@ -467,6 +468,7 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
                     <DeviceFrame 
                       platform={screenshot.platform} 
                       frameColor={project.defaultScreenshotFrame}
+                      scale={scale}
                     >
                       {screenshot.url && (
                         <div style={{ position: 'relative', width: '100%', height: '100%', backgroundColor: 'white' }}>
