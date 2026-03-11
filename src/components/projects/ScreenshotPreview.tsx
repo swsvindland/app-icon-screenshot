@@ -2,13 +2,21 @@
 
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { SmartphoneIcon, Download, Loader2 } from "lucide-react";
+import { SmartphoneIcon, Download, Loader2, Eye } from "lucide-react";
 import { DeviceFrame, getContrastColor } from "./DeviceFrame";
 import { Button } from "@/components/ui/button";
 import { useState, useRef } from "react";
-import { toPng } from "html-to-image";
+import { toPng, toCanvas } from "html-to-image";
 import JSZip from "jszip";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface ScreenshotPreviewProps {
   screenshots: any[];
@@ -31,6 +39,8 @@ const EXPORT_SIZES: Record<string, { width: number, height: number, store: "appl
 
 export function ScreenshotPreview({ screenshots, project, platforms }: ScreenshotPreviewProps) {
   const [isExporting, setIsExporting] = useState(false);
+  const [debugExport, setDebugExport] = useState(false);
+  const [showDebugDialog, setShowDebugDialog] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
   if (screenshots.length === 0) return null;
@@ -38,6 +48,7 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
   const handleExport = async () => {
     if (!exportRef.current) return;
     setIsExporting(true);
+    setDebugExport(true);
     const zip = new JSZip();
 
     try {
@@ -54,32 +65,38 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
 
         const size = EXPORT_SIZES[platform.id] || { width: 1080, height: 1920, store: "google" };
         
+        // Get the background color for this screenshot to pass to toPng
+        const colorSettings = project?.screenshotOverrides?.[screenshot.order] || {};
+        const backgroundColor = colorSettings.backgroundColor || project.defaultScreenshotBackgroundColor || "#f3f4f6";
+
         // Find the element for this screenshot
         const element = document.getElementById(`highres-export-${screenshot._id}`);
         if (!element) continue;
 
-        // Ensure all images within the element are loaded before capturing
-        const images = element.getElementsByTagName('img');
-        const imagePromises = Array.from(images).map(img => {
-          if (img.complete) return Promise.resolve();
-          return new Promise((resolve) => {
-            img.onload = resolve;
-            img.onerror = resolve; // Continue even if one image fails
+          // Add a small trick to "force" visibility if needed, though position: absolute off-screen should work
+          element.style.visibility = 'visible';
+          element.style.opacity = '1';
+
+          // Ensure the element is visible and positioned
+          if (debugExport) {
+            element.scrollIntoView({ block: 'center' });
+          }
+
+          console.log(element)
+          console.log("Exporting screenshot:", screenshot.url);
+          
+          const dataUrl = await toPng(element, {
+            width: size.width,
+            height: size.height,
+            canvasWidth: size.width,
+            canvasHeight: size.height,
+            backgroundColor: backgroundColor,
+            imagePlaceholder: screenshot.url,
+            skipAutoScale: true,
+            cacheBust: true,
+            pixelRatio: 1,
+            preferredFontFormat: 'woff2',
           });
-        });
-        await Promise.all(imagePromises);
-
-        // Small delay to ensure styles are applied
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        const dataUrl = await toPng(element, {
-          width: size.width,
-          height: size.height,
-          skipAutoScale: true,
-          cacheBust: true,
-          pixelRatio: 1,
-        });
-
         const base64Data = dataUrl.split(',')[1];
         const folderName = `${size.store}/${platform.id}`;
         zip.file(`${folderName}/screenshot-${screenshot.order + 1}.png`, base64Data, { base64: true });
@@ -101,6 +118,7 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
       toast.error("Failed to export screenshots");
     } finally {
       setIsExporting(false);
+      setDebugExport(false);
     }
   };
 
@@ -114,18 +132,152 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
           </CardTitle>
           <CardDescription>All screenshots across all platforms</CardDescription>
         </div>
-        <Button 
-          onClick={handleExport} 
-          disabled={isExporting}
-          className="gap-2"
-        >
-          {isExporting ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Download className="w-4 h-4" />
-          )}
-          {isExporting ? "Exporting..." : "Export All"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Dialog open={showDebugDialog} onOpenChange={setShowDebugDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Eye className="w-4 h-4" />
+                Debug View
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col p-0 gap-0">
+              <DialogHeader className="p-6 pb-2 border-b">
+                <DialogTitle>High-Resolution Export Targets (Debug View)</DialogTitle>
+                <DialogDescription>
+                  This is exactly what the browser will try to capture during export. Use this to verify rendering.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex-1 overflow-auto p-6 bg-muted/30">
+                <div className="flex flex-col items-center gap-12">
+                  {screenshots.map((screenshot) => {
+                    const platform = platforms.find(p => p.id === screenshot.platform);
+                    const size = EXPORT_SIZES[screenshot.platform] || { width: 1080, height: 1920 };
+                    const titleSettings = project?.screenshotTitles?.[screenshot.order] || {};
+                    const colorSettings = project?.screenshotOverrides?.[screenshot.order] || {};
+                    
+                    const backgroundColor = colorSettings.backgroundColor || project.defaultScreenshotBackgroundColor || "#f3f4f6";
+                    const foregroundColor = colorSettings.foregroundColor || project.defaultScreenshotForegroundColor || (colorSettings.backgroundColor ? getContrastColor(colorSettings.backgroundColor) : project.defaultScreenshotBackgroundColor ? getContrastColor(project.defaultScreenshotBackgroundColor) : "#000000");
+
+                    const isLandscape = platform?.aspect === "16/9";
+                    const baseWidth = isLandscape ? 240 : (platform?.aspect === "4/3" ? 200 : 160);
+                    const scale = size.width / baseWidth;
+                    
+                    const [aspectW, aspectH] = (platform?.aspect || "9/16").split('/').map(Number);
+                    const aspectRatioValue = aspectW / aspectH;
+
+                    const padding = 16 * scale;
+                    const titleMargin = 16 * scale;
+                    const titleFontSize = 12 * scale;
+                    const minTitleHeight = 24 * scale;
+                    
+                    const screenContainerHeight = size.height - (padding * 2) - titleMargin - minTitleHeight;
+                    const screenContainerWidth = screenContainerHeight * aspectRatioValue;
+
+                    const finalWidth = Math.min(screenContainerWidth, size.width - (padding * 2));
+                    const finalHeight = finalWidth / aspectRatioValue;
+
+                    return (
+                      <div key={`debug-${screenshot._id}`} className="space-y-4 flex flex-col items-center">
+                        <div className="text-sm font-medium px-3 py-1 bg-white rounded-full border shadow-sm">
+                          {platform?.name} - {size.width}x{size.height}
+                        </div>
+                        <div 
+                          className="shadow-2xl origin-top"
+                          style={{ 
+                            width: `${size.width}px`, 
+                            height: `${size.height}px`,
+                            backgroundColor: backgroundColor,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            padding: `${padding}px`,
+                            overflow: 'hidden',
+                            position: 'relative',
+                            transform: 'scale(0.2)', // Scale down for viewing in dialog
+                            marginBottom: `-${size.height * 0.8}px` // Adjust for scale
+                          }}
+                        >
+                          <div style={{ 
+                            width: '100%', 
+                            textAlign: 'center', 
+                            marginBottom: `${titleMargin}px`, 
+                            zIndex: 10,
+                            minHeight: `${minTitleHeight}px`,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center'
+                          }}>
+                            <p style={{ 
+                              color: foregroundColor,
+                              fontSize: `${titleFontSize}px`,
+                              fontWeight: 'bold',
+                              lineHeight: '1.2',
+                              maxWidth: '100%',
+                              wordWrap: 'break-word',
+                              whiteSpace: 'pre-wrap'
+                            }}>
+                              {titleSettings.title || " "}
+                            </p>
+                          </div>
+                          
+                          <div style={{ 
+                            position: 'relative',
+                            flex: 1,
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <div style={{ 
+                              height: `${finalHeight}px`,
+                              width: `${finalWidth}px`,
+                              overflow: 'hidden'
+                            }}>
+                              <DeviceFrame 
+                                platform={screenshot.platform} 
+                                frameColor={project.defaultScreenshotFrame}
+                              >
+                                {screenshot.url && (
+                                  <div style={{ position: 'relative', width: '100%', height: '100%', backgroundColor: 'white' }}>
+                                    <img
+                                      src={screenshot.url}
+                                      alt="Screenshot"
+                                      crossOrigin="anonymous"
+                                      style={{ 
+                                        position: 'absolute',
+                                        inset: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        objectPosition: 'top'
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                              </DeviceFrame>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Button 
+            onClick={handleExport} 
+            disabled={isExporting}
+            className="gap-2"
+          >
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {isExporting ? "Exporting..." : "Export All"}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-6 justify-center">
@@ -189,8 +341,24 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
             })}
         </div>
 
-        {/* Hidden high-res export targets */}
-        <div style={{ position: 'fixed', top: '0', left: '0', width: '100%', height: '100%', opacity: 0.01, pointerEvents: 'none', zIndex: -100, overflow: 'hidden' }} ref={exportRef}>
+        {/* Hidden high-res export targets - moved outside the direct path to ensure visibility/rendering */}
+        <div 
+          style={{ 
+            position: 'fixed', 
+            top: debugExport ? '50%' : '-20000px', 
+            left: debugExport ? '50%' : '-20000px', 
+            transform: debugExport ? 'translate(-50%, -50%) scale(0.1)' : 'none',
+            width: 'auto', 
+            height: 'auto', 
+            overflow: 'visible', 
+            opacity: 1, 
+            pointerEvents: 'none',
+            zIndex: 9999,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            border: debugExport ? '5px solid red' : 'none'
+          }} 
+          ref={exportRef}
+        >
           {screenshots.map((screenshot) => {
             const platform = platforms.find(p => p.id === screenshot.platform);
             const size = EXPORT_SIZES[screenshot.platform] || { width: 1080, height: 1920 };
@@ -205,28 +373,44 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
             const isLandscape = platform?.aspect === "16/9";
             const baseWidth = isLandscape ? 240 : (platform?.aspect === "4/3" ? 200 : 160);
             const scale = size.width / baseWidth;
-            // Padding factor: original p-4 is 16px.
-            const padding = 16 * scale;
-            const titleMargin = 16 * scale;
-            const titleFontSize = 12 * scale;
-            const minTitleHeight = 24 * scale;
+            
+        // Explicitly calculate layout for export target to avoid aspect-ratio issues in html-to-image
+        const [aspectW, aspectH] = (platform?.aspect || "9/16").split('/').map(Number);
+        const aspectRatioValue = aspectW / aspectH;
 
-            return (
-              <div 
-                key={`highres-${screenshot._id}`}
-                id={`highres-export-${screenshot._id}`}
-                style={{ 
-                  width: `${size.width}px`, 
-                  height: `${size.height}px`,
-                  backgroundColor: backgroundColor,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  padding: `${padding}px`,
-                  overflow: 'hidden',
-                  position: 'relative'
-                }}
-              >
+        // Padding factor: original p-4 is 16px.
+        const padding = 16 * scale;
+        const titleMargin = 16 * scale;
+        const titleFontSize = 12 * scale;
+        const minTitleHeight = 24 * scale;
+        
+        // Calculate screen container height: full height minus padding (top/bottom) and title space
+        const screenContainerHeight = size.height - (padding * 2) - titleMargin - minTitleHeight;
+        const screenContainerWidth = screenContainerHeight * aspectRatioValue;
+
+        // Ensure the screen container is centered and doesn't overflow
+        const finalWidth = Math.min(screenContainerWidth, size.width - (padding * 2));
+        const finalHeight = finalWidth / aspectRatioValue;
+
+        return (
+          <div 
+            key={`highres-${screenshot._id}`}
+            id={`highres-export-${screenshot._id}`}
+            style={{ 
+              width: `${size.width}px`, 
+              height: `${size.height}px`,
+              backgroundColor: backgroundColor,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              padding: `${padding}px`,
+              overflow: 'hidden',
+              position: 'relative',
+              visibility: 'visible',
+              opacity: 1,
+              zIndex: 1 // Add a z-index to individual items to ensure they are on top of their container
+            }}
+          >
                  <div style={{ 
                     width: '100%', 
                     textAlign: 'center', 
@@ -259,8 +443,8 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
                   justifyContent: 'center'
                 }}>
                   <div style={{ 
-                    height: '100%',
-                    aspectRatio: platform?.aspect || "9/16",
+                    height: `${finalHeight}px`,
+                    width: `${finalWidth}px`,
                     overflow: 'hidden'
                   }}>
                     <DeviceFrame 
@@ -268,13 +452,19 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
                       frameColor={project.defaultScreenshotFrame}
                     >
                       {screenshot.url && (
-                        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                          <Image
+                        <div style={{ position: 'relative', width: '100%', height: '100%', backgroundColor: 'white' }}>
+                          <img
                             src={screenshot.url}
-                            alt="Screenshot"
-                            fill
-                            style={{ objectFit: 'cover', objectPosition: 'top' }}
-                            unoptimized
+                            alt={`Screenshot ${screenshot._id}`}
+                            key={screenshot._id}
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              objectPosition: 'top'
+                            }}
                           />
                         </div>
                       )}
