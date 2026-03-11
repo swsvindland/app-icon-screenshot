@@ -240,7 +240,7 @@ export function IconGenerator({ projectId }: IconGeneratorProps) {
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, size, size);
 
-      const img = new Image();
+      const img = new window.Image();
       const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
       const url = URL.createObjectURL(svgBlob);
 
