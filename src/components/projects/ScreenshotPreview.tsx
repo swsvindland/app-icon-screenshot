@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { SmartphoneIcon, Download, Loader2, Eye } from "lucide-react";
+import { SmartphoneIcon, Download, Loader2, Eye, AlertCircle } from "lucide-react";
 import { DeviceFrame, getContrastColor } from "./DeviceFrame";
 import { Button } from "@/components/ui/button";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toPng, toCanvas } from "html-to-image";
 import JSZip from "jszip";
 import { toast } from "sonner";
@@ -41,7 +41,16 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
   const [isExporting, setIsExporting] = useState(false);
   const [debugExport, setDebugExport] = useState(false);
   const [showDebugDialog, setShowDebugDialog] = useState(false);
+  const [isChromium, setIsChromium] = useState(true);
   const exportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Basic check for Chromium-based browsers
+    const isChromiumBrowser = (window as any).chrome !== undefined || 
+                             navigator.userAgent.indexOf('Chrome') !== -1 ||
+                             navigator.userAgent.indexOf('Chromium') !== -1;
+    setIsChromium(isChromiumBrowser);
+  }, []);
 
   if (screenshots.length === 0) return null;
 
@@ -133,6 +142,14 @@ export function ScreenshotPreview({ screenshots, project, platforms }: Screensho
           <CardDescription>All screenshots across all platforms</CardDescription>
         </div>
         <div className="flex items-center gap-2">
+          {!isChromium && (
+            <div className="flex items-center text-amber-500 mr-2 group relative">
+              <AlertCircle className="w-5 h-5 cursor-help" />
+              <div className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-popover text-popover-foreground text-xs rounded shadow-md border opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 text-center">
+                Screenshots might not generate correctly in non-Chromium browsers.
+              </div>
+            </div>
+          )}
           <Dialog open={showDebugDialog} onOpenChange={setShowDebugDialog}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2">
